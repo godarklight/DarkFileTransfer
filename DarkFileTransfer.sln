@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30114.105
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DarkFileTransferCLI", "CLI\DarkFileTransferCLI.csproj", "{808E1309-A792-4348-8EC0-57A146D6752F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DarkFileTransfer", "GUI\DarkFileTransfer.csproj", "{57CE5E25-814E-4C56-A36E-B4481946FAD2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DarkFileTransferLib", "Common\DarkFileTransferLib.csproj", "{39A1966B-C927-4B8D-9F5C-C0D610684CE3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{808E1309-A792-4348-8EC0-57A146D6752F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{808E1309-A792-4348-8EC0-57A146D6752F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{808E1309-A792-4348-8EC0-57A146D6752F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{808E1309-A792-4348-8EC0-57A146D6752F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57CE5E25-814E-4C56-A36E-B4481946FAD2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57CE5E25-814E-4C56-A36E-B4481946FAD2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57CE5E25-814E-4C56-A36E-B4481946FAD2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57CE5E25-814E-4C56-A36E-B4481946FAD2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39A1966B-C927-4B8D-9F5C-C0D610684CE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39A1966B-C927-4B8D-9F5C-C0D610684CE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39A1966B-C927-4B8D-9F5C-C0D610684CE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39A1966B-C927-4B8D-9F5C-C0D610684CE3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
