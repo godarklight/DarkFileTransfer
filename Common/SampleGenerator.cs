@@ -6,7 +6,6 @@ namespace DarkFileTransfer.Common
 {
     public class SampleGenerator
     {
-        double[] smoother;
         CarrierGenerator cg;
         public bool Completed
         {

@@ -19,32 +19,9 @@ namespace DarkFileTransfer.Common
             this.output = output;
         }
 
-        public void ProcessFrame(byte[] frameBytes)
+        public void ProcessFrame(Complex[] frameFFT)
         {
-            Complex[] frameComplex = PcmConvert.ConvertPCMToComplex(frameBytes);
-            Complex[] frameFFT = FFT.CalcFFT(frameComplex);
-
-            if (frameNumber == 0)
-            {
-                File.Delete("ProcessFrame0.csv");
-                File.Delete("ProcessFrame1.csv");
-                File.Delete("ProcessFrame2.csv");
-                File.Delete("ProcessFrame3.csv");
-                FFTDebug.WriteComplexArrayToFile(frameFFT, "ProcessFrame0.csv");
-            }
-            if (frameNumber == 1)
-            {
-                FFTDebug.WriteComplexArrayToFile(frameFFT, "ProcessFrame1.csv");
-            }
-            if (frameNumber == 2)
-            {
-                FFTDebug.WriteComplexArrayToFile(frameFFT, "ProcessFrame2.csv");
-            }
-            if (frameNumber == 3)
-            {
-                FFTDebug.WriteComplexArrayToFile(frameFFT, "ProcessFrame3.csv");
-            }
-
+            FFTDebug.WriteComplexArrayToFile(frameFFT, $"frame/{frameNumber}.csv");
             for (int i = 32; i < (frameFFT.Length * 0.3); i += 8)
             {
                 int value = 0;

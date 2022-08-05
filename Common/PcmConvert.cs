@@ -5,10 +5,10 @@ namespace DarkFileTransfer.Common
 {
     public static class PcmConvert
     {
-        public static double[] ConvertPCMToDouble(byte[] inputData)
+        public static double[] ConvertPCMToDouble(byte[] inputData, int length)
         {
-            double[] retVal = new double[inputData.Length / 2];
-            for (int i = 0; i < inputData.Length / 2; i++)
+            double[] retVal = new double[length / 2];
+            for (int i = 0; i < length / 2; i++)
             {
                 short value = (short)(inputData[i * 2 + 1] << 8 | inputData[i * 2]);
                 retVal[i] = value / (double)short.MaxValue;
@@ -16,9 +16,14 @@ namespace DarkFileTransfer.Common
             return retVal;
         }
 
-        public static Complex[] ConvertPCMToComplex(byte[] inputData)
+        public static double[] ConvertPCMToDouble(byte[] inputData)
         {
-            double[] temp = ConvertPCMToDouble(inputData);
+            return ConvertPCMToDouble(inputData, inputData.Length);
+        }
+
+        public static Complex[] ConvertPCMToComplex(byte[] inputData, int length)
+        {
+            double[] temp = ConvertPCMToDouble(inputData, length);
             Complex[] retVal = new Complex[temp.Length];
             for (int i = 0; i < retVal.Length; i++)
             {
@@ -27,10 +32,15 @@ namespace DarkFileTransfer.Common
             return retVal;
         }
 
-        public static byte[] ConvertDoubleToPCM(double[] inputData)
+        public static Complex[] ConvertPCMToComplex(byte[] inputData)
         {
-            byte[] retVal = new byte[2 * inputData.Length];
-            for (int i = 0; i < inputData.Length; i++)
+            return ConvertPCMToComplex(inputData, inputData.Length);
+        }
+
+        public static byte[] ConvertDoubleToPCM(double[] inputData, int length)
+        {
+            byte[] retVal = new byte[2 * length];
+            for (int i = 0; i < length; i++)
             {
                 double input = Math.Clamp(inputData[i], -1.0, 1.0);
                 short value = (short)(input * short.MaxValue);
@@ -41,14 +51,24 @@ namespace DarkFileTransfer.Common
             return retVal;
         }
 
-        public static byte[] ConvertComplexToPCM(Complex[] inputData)
+        public static byte[] ConvertDoubleToPCM(double[] inputData)
         {
-            double[] inputDataDouble = new double[inputData.Length];
-            for (int i = 0; i < inputData.Length; i++)
+            return ConvertDoubleToPCM(inputData, inputData.Length);
+        }
+
+        public static byte[] ConvertComplexToPCM(Complex[] inputData, int length)
+        {
+            double[] inputDataDouble = new double[length];
+            for (int i = 0; i < length; i++)
             {
                 inputDataDouble[i] = inputData[i].Real;
             }
             return ConvertDoubleToPCM(inputDataDouble);
+        }
+
+        public static byte[] ConvertComplexToPCM(Complex[] inputData)
+        {
+            return ConvertComplexToPCM(inputData, inputData.Length);
         }
 
         public static byte[] AddWAVHeader(byte[] inputData)

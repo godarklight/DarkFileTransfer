@@ -12,9 +12,9 @@ namespace DarkFileTransfer.Common
             File.Delete(outputFile);
             using (StreamWriter sw = new StreamWriter(outputFile))
             {
-                for (int i = 0; i < inputData.Length; i++)
+                for (int i = 0; i < inputData.Length / 2; i++)
                 {
-                    sw.WriteLine($"{inputData[i].Real},{inputData[i].Imaginary}");
+                    sw.WriteLine($"{i},{inputData[i].Real},{inputData[i].Imaginary}");
                 }
             }
         }

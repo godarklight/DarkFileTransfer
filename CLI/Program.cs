@@ -27,33 +27,26 @@ namespace DarkFileTransfer.CLI
             File.Delete("test.wav");
             File.WriteAllBytes("test.wav", wavBytes);
 
-
             //Test output
-            File.Delete("ProcessFrame1.csv");
-            File.Delete("ProcessFrame2.csv");
-            File.Delete("ProcessFrame3.csv");
-            File.Delete("ProcessFrame4.csv");
             File.Delete("output.jpg");
+
+
+            //Test decoder
+            byte[] rawWavBytes = File.ReadAllBytes("in7.raw");
+
             using (FileStream fs = new FileStream("output.jpg", FileMode.Create))
             {
                 byte[] chunk = new byte[64];
-                int readLeft = rawBytes.Length;
+                int readLeft = rawWavBytes.Length - 44;
                 Decoder decode = new Decoder(fs);
                 Synchroniser sync = new Synchroniser(decode);
-                //Desync the data for testing
-                //sync.ReceiveData(new byte[8]);
                 while (readLeft > 0)
                 {
-                    int thisCopy = readLeft;
-                    if (readLeft > chunk.Length)
-                    {
-                        thisCopy = chunk.Length;
-                    }
-                    Array.Copy(rawBytes, rawBytes.Length - readLeft, chunk, 0, thisCopy);
+                    int thisCopy = readLeft > chunk.Length ? chunk.Length : readLeft;
+                    Array.Copy(rawWavBytes, rawWavBytes.Length - readLeft, chunk, 0, thisCopy);
                     sync.ReceiveData(chunk);
                     readLeft -= thisCopy;
                 }
-                sync.Complete();
             }
         }
     }
