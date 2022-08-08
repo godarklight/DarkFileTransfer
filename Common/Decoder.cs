@@ -21,7 +21,10 @@ namespace DarkFileTransfer.Common
 
         public void ProcessFrame(Complex[] frameFFT)
         {
-            FFTDebug.WriteComplexArrayToFile(frameFFT, $"frame/{frameNumber}.csv");
+            if (frameNumber < 10)
+            {
+                FFTDebug.WriteHalfComplexArrayToFile(frameFFT, $"frame/{frameNumber}.csv");
+            }
             for (int i = 32; i < (frameFFT.Length * 0.3); i += 8)
             {
                 int value = 0;

@@ -60,22 +60,26 @@ namespace DarkFileTransfer.Common
                 if (morseIDPos == morseID.Length)
                 {
                     morseIDPos = 0;
-                    morseFramePos = 32;
+                    morseFramePos = 16;
                     morseValue = 0;
                 }
                 else
                 {
                     morseValue = morseID[morseIDPos];
-                    morseFramePos = 4;
+                    morseFramePos = 1;
+                    if (morseValue == 0)
+                    {
+                        morseFramePos = 2;
+                    }
                     if (morseValue == 2)
                     {
                         morseValue = 1;
-                        morseFramePos = 8;
+                        morseFramePos = 3;
                     }
                     morseIDPos++;
                 }
             }
-            if (morseFramePos == 2)
+            if (morseFramePos == 0)
             {
                 morseValue = 0;
             }

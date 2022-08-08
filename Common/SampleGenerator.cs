@@ -18,14 +18,17 @@ namespace DarkFileTransfer.Common
         public SampleGenerator(CarrierGenerator cg)
         {
             this.cg = cg;
-
         }
 
         public byte[] GetChunk()
         {
             Complex[] carriers = cg.GetCarriers();
             Complex[] ifft = FFT.CalcIFFT(carriers);
-            return PcmConvert.ConvertComplexToPCM(ifft);
+            int length8 = ifft.Length / 8;
+            Complex[] ifftCyclic = new Complex[ifft.Length + length8];
+            Array.Copy(ifft, 0, ifftCyclic, length8, ifft.Length);
+            Array.Copy(ifft, ifft.Length - length8, ifftCyclic, 0, length8);
+            return PcmConvert.ConvertComplexToPCM(ifftCyclic);
         }
     }
 }

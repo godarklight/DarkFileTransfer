@@ -5,6 +5,7 @@ namespace DarkFileTransfer.Common
         DESYNC,
         FREQ_SYNCED,
         TIME_SYNCED,
+        GUARD_SYNCED,
         SYMBOL_SYNCED,
     }
 }

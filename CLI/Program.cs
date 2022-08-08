@@ -28,16 +28,17 @@ namespace DarkFileTransfer.CLI
             File.WriteAllBytes("test.wav", wavBytes);
 
             //Test output
-            File.Delete("output.jpg");
+            //File.Delete("output.jpg");
 
+            MorletWavelet mw = new MorletWavelet(12, 512);
 
             //Test decoder
-            byte[] rawWavBytes = File.ReadAllBytes("in7.raw");
+            byte[] rawWavBytes = File.ReadAllBytes("inphone.raw");
 
             using (FileStream fs = new FileStream("output.jpg", FileMode.Create))
             {
                 byte[] chunk = new byte[64];
-                int readLeft = rawWavBytes.Length - 44;
+                int readLeft = rawWavBytes.Length;
                 Decoder decode = new Decoder(fs);
                 Synchroniser sync = new Synchroniser(decode);
                 while (readLeft > 0)
