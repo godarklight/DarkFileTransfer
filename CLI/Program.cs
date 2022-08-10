@@ -33,7 +33,7 @@ namespace DarkFileTransfer.CLI
             //File.Delete("output.jpg");
 
             //Test decoder
-            byte[] rawWavBytes = File.ReadAllBytes("micin.raw");
+            byte[] rawWavBytes = File.ReadAllBytes("phonein2.raw");
 
             using (FileStream fs = new FileStream("output.jpg", FileMode.Create))
             {

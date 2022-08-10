@@ -159,7 +159,7 @@ namespace DarkFileTransfer.Common
                 buffer2 = temp;
 
                 //Fix the rotation of the carriers
-                double thisError = CalculatePhaseError(fft[12].Phase, fft[16].Phase) / 4;
+                double thisError = CalculatePhaseError(fft[8].Phase, fft[16].Phase) / 8.0;
                 double offset = CalculatePhaseError(0, fft[12].Phase) - thisError * 12;
                 for (int i = 0; i < 512; i++)
                 {
