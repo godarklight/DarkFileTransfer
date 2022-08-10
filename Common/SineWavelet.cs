@@ -3,20 +3,17 @@ using System.Numerics;
 
 namespace DarkFileTransfer.Common
 {
-    public class MorletWavelet : Wavelet
+    //The "slow" fourier transform for a single bin
+    public class SineWavelet : Wavelet
     {
         Complex[] wavelet;
-        public MorletWavelet(double carrier, int length)
+        public SineWavelet(double carrier, int length)
         {
             wavelet = new Complex[length];
-            Complex add = Complex.Zero;
             for (int i = 0; i < length; i++)
             {
-                double lengthM1 = length - 1.0;
-                double time = (i - length / 2) / lengthM1;
-                double sigma = 4 / (Math.Tau * carrier);
-                Complex topPart = (Complex.ImaginaryOne * Math.Tau * carrier * time) - (0.5 * Math.Pow(time / sigma, 2.0));
-                wavelet[i] = Complex.Exp(topPart);
+                double phase = (i / (double)length) * Math.Tau * carrier;
+                wavelet[i] = new Complex(Math.Cos(phase), Math.Sin(phase));
             }
         }
 

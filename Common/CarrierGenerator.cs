@@ -10,7 +10,6 @@ namespace DarkFileTransfer.Common
         int morseIDPos = 0;
         int morseFramePos = 0;
         int morseValue = 0;
-        int syncValue = 0;
         int timingID = 0;
         int timingPos = 0;
         int timingValue = 0;
@@ -34,12 +33,10 @@ namespace DarkFileTransfer.Common
         {
             Complex[] retVal = new Complex[chunkSize];
 
-            //Freq Sync Carrier
-            retVal[12] = new Complex(0, 2);
-
-            //Sync Channel
-            retVal[16] = new Complex(0, syncValue) * 2.0;
-            syncValue = (syncValue + 1) % 2;
+            //Pilot Tones
+            retVal[8] = new Complex(2, 0);  
+            retVal[12] = new Complex(2, 0);
+            retVal[16] = new Complex(2, 0);
 
             //Timing Channel
             if (timingPos == 0)
@@ -47,9 +44,9 @@ namespace DarkFileTransfer.Common
                 timingValue = timingID;
                 timingID++;
                 timingPos = 32;
-                retVal[20] = new Complex(0, 2);
+                retVal[20] = new Complex(4, 0);
             }
-            retVal[24] = new Complex(0, timingValue & 1) * 2.0;
+            retVal[24] = new Complex((timingValue & 1) * 2.0, 0);
             timingValue = timingValue >> 1;
             timingPos--;
 
@@ -83,11 +80,11 @@ namespace DarkFileTransfer.Common
             {
                 morseValue = 0;
             }
-            retVal[28] = new Complex(0, morseValue) * 4.0;
+            retVal[28] = new Complex(morseValue * 4.0, 0.0);
 
             //Data channels
             //30% of an 8Khz channel is 2.7Khz
-            for (int i = 32; i < (chunkSize * 0.3); i += 8)
+            for (int i = 0; i < 16; i++)
             {
                 if (readPos == fileBytes.Length)
                 {
@@ -99,12 +96,11 @@ namespace DarkFileTransfer.Common
 
                 for (int j = 0; j < 4; j++)
                 {
-                    double val1 = (num & 1) == 0 ? -1 : 1;
+                    double val1 = (num & 1) == 0 ? -1.414 : 1.414;
                     num = num >> 1;
-                    double val2 = (num & 1) == 0 ? -1 : 1;
+                    double val2 = (num & 1) == 0 ? -1.414 : 1.414;
                     num = num >> 1;
-                    retVal[i + j * 2] = new Complex(val1, val2) * 2.0;
-
+                    retVal[32 + 8 * i + j * 2] = new Complex(val1, val2);
                 }
 
                 readPos++;

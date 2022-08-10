@@ -10,6 +10,7 @@ namespace DarkFileTransfer.CLI
     {
         static void Main(string[] args)
         {
+            /*
             byte[] fileBytes = File.ReadAllBytes("salmon.jpg");
             CarrierGenerator cg = new CarrierGenerator(fileBytes, 512);
             SampleGenerator sg = new SampleGenerator(cg);
@@ -26,14 +27,13 @@ namespace DarkFileTransfer.CLI
             byte[] wavBytes = PcmConvert.AddWAVHeader(rawBytes);
             File.Delete("test.wav");
             File.WriteAllBytes("test.wav", wavBytes);
+            */
 
             //Test output
             //File.Delete("output.jpg");
 
-            MorletWavelet mw = new MorletWavelet(12, 512);
-
             //Test decoder
-            byte[] rawWavBytes = File.ReadAllBytes("inphone.raw");
+            byte[] rawWavBytes = File.ReadAllBytes("micin.raw");
 
             using (FileStream fs = new FileStream("output.jpg", FileMode.Create))
             {

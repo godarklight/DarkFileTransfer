@@ -11,12 +11,12 @@ namespace DarkFileTransfer.Common
         private SyncState state = SyncState.DESYNC;
         public double[] buffer = new double[32768];
         public double[] buffer2 = new double[32768];
-        public double[] errors = new double[8192];
         int bufferOffset = 0;
         int bufferPos = 0;
         long totalPos = 0;
         Decoder decoder;
-        MorletWavelet waveletSync = new MorletWavelet(16, 512);
+        Wavelet waveletSync = new SineWavelet(12, 512);
+        int frameNumber = 0;
 
         public bool Completed
         {
@@ -37,36 +37,37 @@ namespace DarkFileTransfer.Common
             bufferPos += copy.Length;
             totalPos += copy.Length;
 
-            if (state == SyncState.DESYNC && bufferPos > 1024)
+            if (state == SyncState.DESYNC && bufferPos >= 512)
             {
-                Complex val = waveletSync.Convolute(buffer, 0);
-                if (val.Magnitude < 0.2)
-                {
-                    Array.Copy(buffer, 1024, buffer2, 0, buffer2.Length - 1024);
-                    double[] temp = buffer;
-                    buffer = buffer2;
-                    buffer2 = temp;
-                    bufferPos -= 1024;
-                }
-                else
+                bufferOffset = bufferPos - 512;
+                Complex val = waveletSync.Convolute(buffer, bufferOffset);
+                if (val.Magnitude > 0.1)
                 {
                     state = SyncState.FREQ_SYNCED;
                 }
+                else if (bufferPos > 16384)
+                {
+                    Array.Copy(buffer, 512, buffer2, 0, buffer2.Length - 512);
+                    double[] temp = buffer;
+                    buffer = buffer2;
+                    buffer2 = temp;
+                    bufferPos -= 512;
+                    bufferOffset -= 512;
+                }
             }
 
-            if (state == SyncState.FREQ_SYNCED && bufferPos > 2048)
+            if (state == SyncState.FREQ_SYNCED && bufferPos - bufferOffset > 2048)
             {
                 int bestPos = 0;
                 double lowestError = double.PositiveInfinity;
-                for (int i = 0; i < 1024; i++)
+                for (int i = 0; i < 512; i++)
                 {
                     double error = 0;
                     //Try to match half of the guard interval
                     for (int j = 0; j < 32; j++)
                     {
-                        error += Math.Abs(buffer[i + j] - buffer[i + j + 512]);
+                        error += Math.Abs(buffer[i + j + bufferOffset] - buffer[i + j + bufferOffset + 512]);
                     }
-                    errors[i] = error;
                     if (error < lowestError)
                     {
                         lowestError = error;
@@ -75,35 +76,21 @@ namespace DarkFileTransfer.Common
                 }
                 if (lowestError < 0.05)
                 {
-                    bufferOffset = bestPos;
-                    Complex[] fftTest1 = GetFFTFromDoubleArray(buffer, bestPos, 512);
+                    bufferOffset += bestPos;
+                    Complex[] fftTest = GetFFTFromDoubleArray(buffer, bufferOffset, 512);
 
-                    if (fftTest1[16].Magnitude > 0.5)
+                    if (fftTest[8].Magnitude > 0.5 && fftTest[12].Magnitude > 0.5 && fftTest[16].Magnitude > 0.5)
                     {
                         state = SyncState.GUARD_SYNCED;
                     }
                     else
                     {
-                        if (bestPos > 576)
-                        {
-                            bestPos -= 576;
-                        }
-                        else
-                        {
-                            bestPos += 576;
-                        }
-                        Complex[] fftTest2 = GetFFTFromDoubleArray(buffer, bestPos, 512);
-                        if (fftTest2[16].Magnitude > 0.5)
-                        {
-                            bufferOffset = bestPos;
-                            state = SyncState.GUARD_SYNCED;
-                        }
-                        else
-                        {
-                            state = SyncState.DESYNC;
-                            bufferPos = 0;
-                        }
+                        state = SyncState.DESYNC;
                     }
+                }
+                else
+                {
+                    state = SyncState.DESYNC;
                 }
             }
 
@@ -119,22 +106,34 @@ namespace DarkFileTransfer.Common
                         fftin[j] = buffer[bufferOffset + i + j];
                     }
                     Complex[] fft = FFT.CalcFFT(fftin);
-                    double thisError = Math.Abs(CalculatePhaseError(fft[12].Phase, fft[16].Phase));
+                    double thisError = GetPilotError(fft);
                     if (thisError < lowestError)
                     {
                         lowestError = thisError;
                         newOffset = i;
                     }
                 }
-                if (Math.Abs(lowestError) < 0.05)
+                if (lowestError < 0.05)
                 {
                     bufferOffset += newOffset;
                     state = SyncState.SYMBOL_SYNCED;
+                    while (bufferOffset > 576)
+                    {
+                        Complex[] fftback = GetFFTFromDoubleArray(buffer, bufferOffset - 576, 512);
+                        double pilotError = GetPilotError(fftback);
+                        if (pilotError < 0.05)
+                        {
+                            bufferOffset -= 576;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
                 }
                 else
                 {
                     state = SyncState.DESYNC;
-                    bufferPos = 0;
                 }
             }
 
@@ -146,6 +145,12 @@ namespace DarkFileTransfer.Common
                     fftin[i] = new Complex(buffer[bufferOffset + i], 0);
                 }
                 Complex[] fft = FFT.CalcFFT(fftin);
+                if (fft[8].Magnitude < 0.1 || fft[12].Magnitude < 0.1 || fft[16].Magnitude < 0.1)
+                {
+                    state = SyncState.DESYNC;
+                    break;
+                }
+
                 //Bufferflip
                 Array.Copy(buffer, 576, buffer2, 0, bufferPos - 576);
                 bufferPos -= 576;
@@ -153,25 +158,21 @@ namespace DarkFileTransfer.Common
                 buffer = buffer2;
                 buffer2 = temp;
 
-                //Debug
-                Complex[] phase1 = GetFFTAmpPhase(fft);
-                ZeroUnusedCarriers(fft);
-                ZeroUnusedCarriers(phase1);
-                FFTDebug.WriteHalfComplexArrayToFile(fft, "sync1.csv");
-                FFTDebug.WriteHalfComplexArrayToFile(phase1, "sync1a.csv");
-                Complex c = new Complex(-2, -2);
+                //Fix the rotation of the carriers
                 double thisError = CalculatePhaseError(fft[12].Phase, fft[16].Phase) / 4;
-                double offset = CalculatePhaseError(Math.PI / 2.0, fft[12].Phase) - thisError * 12;
+                double offset = CalculatePhaseError(0, fft[12].Phase) - thisError * 12;
                 for (int i = 0; i < 512; i++)
                 {
                     Complex rotate = Complex.FromPolarCoordinates(1, thisError * i + offset);
                     fft[i] = fft[i] * rotate;
                 }
-                Complex[] phase2 = GetFFTAmpPhase(fft);
-                FFTDebug.WriteHalfComplexArrayToFile(fft, "sync2.csv");
-                ZeroUnusedCarriers(phase2);
-                FFTDebug.WriteHalfComplexArrayToFile(phase2, "sync2a.csv");
                 decoder.ProcessFrame(fft);
+                ZeroUnusedCarriers(fft);
+                FFTDebug.WriteHalfComplexArrayToFile(fft, $"frame/{frameNumber}.csv");
+                Complex[] ampPhase = GetFFTAmpPhase(fft);
+                ZeroUnusedCarriers(ampPhase);
+                FFTDebug.WriteHalfComplexArrayToFile(ampPhase, $"frame/{frameNumber}.csv-ap");
+                frameNumber++;
             }
         }
 
@@ -218,7 +219,7 @@ namespace DarkFileTransfer.Common
                 {
                     wipe = true;
                 }
-                if (i < 32 && i != 12 && i != 16 && i != 20 && i != 24)
+                if (i < 32 && i % 4 != 0 || i == 0 || i == 4)
                 {
                     wipe = true;
                 }
@@ -231,6 +232,13 @@ namespace DarkFileTransfer.Common
                     input[i] = Complex.Zero;
                 }
             }
+        }
+
+        private double GetPilotError(Complex[] fft)
+        {
+            double thisError = Math.Abs(CalculatePhaseError(fft[8].Phase, fft[12].Phase));
+            thisError += Math.Abs(CalculatePhaseError(fft[12].Phase, fft[16].Phase));
+            return thisError;
         }
     }
 }
