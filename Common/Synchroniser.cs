@@ -15,7 +15,7 @@ namespace DarkFileTransfer.Common
         int bufferPos = 0;
         long totalPos = 0;
         Decoder decoder;
-        Wavelet waveletSync = new SineWavelet(12, 512);
+        Wavelet waveletSync = new SineWavelet(12, Constants.FFT_SIZE);
         int frameNumber = 0;
 
         public bool Completed
@@ -37,9 +37,9 @@ namespace DarkFileTransfer.Common
             bufferPos += copy.Length;
             totalPos += copy.Length;
 
-            if (state == SyncState.DESYNC && bufferPos >= 512)
+            if (state == SyncState.DESYNC && bufferPos >= Constants.FFT_SIZE)
             {
-                bufferOffset = bufferPos - 512;
+                bufferOffset = bufferPos - Constants.FFT_SIZE;
                 Complex val = waveletSync.Convolute(buffer, bufferOffset);
                 if (val.Magnitude > 0.1)
                 {
@@ -47,26 +47,26 @@ namespace DarkFileTransfer.Common
                 }
                 else if (bufferPos > 16384)
                 {
-                    Array.Copy(buffer, 512, buffer2, 0, buffer2.Length - 512);
+                    Array.Copy(buffer, Constants.FFT_SIZE, buffer2, 0, buffer2.Length - Constants.FFT_SIZE);
                     double[] temp = buffer;
                     buffer = buffer2;
                     buffer2 = temp;
-                    bufferPos -= 512;
-                    bufferOffset -= 512;
+                    bufferPos -= Constants.FFT_SIZE;
+                    bufferOffset -= Constants.FFT_SIZE;
                 }
             }
 
-            if (state == SyncState.FREQ_SYNCED && bufferPos - bufferOffset > 2048)
+            if (state == SyncState.FREQ_SYNCED && bufferPos - bufferOffset > Constants.FFT_SIZE * 4)
             {
                 int bestPos = 0;
                 double lowestError = double.PositiveInfinity;
-                for (int i = 0; i < 512; i++)
+                for (int i = 0; i < Constants.FFT_SIZE; i++)
                 {
                     double error = 0;
                     //Try to match half of the guard interval
-                    for (int j = 0; j < 32; j++)
+                    for (int j = 0; j < Constants.GUARD_SIZE / 2; j++)
                     {
-                        error += Math.Abs(buffer[i + j + bufferOffset] - buffer[i + j + bufferOffset + 512]);
+                        error += Math.Abs(buffer[i + j + bufferOffset] - buffer[i + j + bufferOffset + Constants.FFT_SIZE]);
                     }
                     if (error < lowestError)
                     {
@@ -77,7 +77,7 @@ namespace DarkFileTransfer.Common
                 if (lowestError < 0.05)
                 {
                     bufferOffset += bestPos;
-                    Complex[] fftTest = GetFFTFromDoubleArray(buffer, bufferOffset, 512);
+                    Complex[] fftTest = GetFFTFromDoubleArray(buffer, bufferOffset, Constants.FFT_SIZE);
 
                     if (fftTest[8].Magnitude > 0.5 && fftTest[12].Magnitude > 0.5 && fftTest[16].Magnitude > 0.5)
                     {
@@ -94,18 +94,14 @@ namespace DarkFileTransfer.Common
                 }
             }
 
-            if (state == SyncState.GUARD_SYNCED && bufferPos - bufferOffset > 8192)
+            if (state == SyncState.GUARD_SYNCED && bufferPos - bufferOffset > Constants.FFT_SIZE * 16)
             {
                 int newOffset = 0;
                 double lowestError = double.PositiveInfinity;
-                Complex[] fftin = new Complex[512];
-                for (int i = 0; i < 64; i++)
+                Complex[] fftin = new Complex[Constants.FFT_SIZE];
+                for (int i = 0; i <= 64; i++)
                 {
-                    for (int j = 0; j < 512; j++)
-                    {
-                        fftin[j] = buffer[bufferOffset + i + j];
-                    }
-                    Complex[] fft = FFT.CalcFFT(fftin);
+                    Complex[] fft = GetFFTFromDoubleArray(buffer, bufferOffset + i, Constants.FFT_SIZE);
                     double thisError = GetPilotError(fft);
                     if (thisError < lowestError)
                     {
@@ -117,13 +113,13 @@ namespace DarkFileTransfer.Common
                 {
                     bufferOffset += newOffset;
                     state = SyncState.SYMBOL_SYNCED;
-                    while (bufferOffset > 576)
+                    while (bufferOffset > (Constants.FFT_SIZE + Constants.GUARD_SIZE))
                     {
-                        Complex[] fftback = GetFFTFromDoubleArray(buffer, bufferOffset - 576, 512);
+                        Complex[] fftback = GetFFTFromDoubleArray(buffer, bufferOffset - (Constants.FFT_SIZE + Constants.GUARD_SIZE), Constants.FFT_SIZE);
                         double pilotError = GetPilotError(fftback);
                         if (pilotError < 0.05)
                         {
-                            bufferOffset -= 576;
+                            bufferOffset -= (Constants.FFT_SIZE + Constants.GUARD_SIZE);
                         }
                         else
                         {
@@ -137,14 +133,9 @@ namespace DarkFileTransfer.Common
                 }
             }
 
-            while (state == SyncState.SYMBOL_SYNCED && (bufferPos - bufferOffset) > 1024)
+            while (state == SyncState.SYMBOL_SYNCED && (bufferPos - bufferOffset) > Constants.FFT_SIZE)
             {
-                Complex[] fftin = new Complex[512];
-                for (int i = 0; i < 512; i++)
-                {
-                    fftin[i] = new Complex(buffer[bufferOffset + i], 0);
-                }
-                Complex[] fft = FFT.CalcFFT(fftin);
+                Complex[] fft = GetFFTFromDoubleArray(buffer, bufferOffset, Constants.FFT_SIZE);
                 if (fft[8].Magnitude < 0.1 || fft[12].Magnitude < 0.1 || fft[16].Magnitude < 0.1)
                 {
                     state = SyncState.DESYNC;
@@ -152,16 +143,16 @@ namespace DarkFileTransfer.Common
                 }
 
                 //Bufferflip
-                Array.Copy(buffer, 576, buffer2, 0, bufferPos - 576);
-                bufferPos -= 576;
+                Array.Copy(buffer, Constants.FFT_SIZE + Constants.GUARD_SIZE, buffer2, 0, bufferPos - Constants.FFT_SIZE + Constants.GUARD_SIZE);
+                bufferPos -= Constants.FFT_SIZE + Constants.GUARD_SIZE;
                 double[] temp = buffer;
                 buffer = buffer2;
                 buffer2 = temp;
 
                 //Fix the rotation of the carriers
                 double thisError = CalculatePhaseError(fft[8].Phase, fft[16].Phase) / 8.0;
-                double offset = CalculatePhaseError(0, fft[12].Phase) - thisError * 12;
-                for (int i = 0; i < 512; i++)
+                double offset = CalculatePhaseError(0, fft[8].Phase) - thisError * 8;
+                for (int i = 0; i < Constants.FFT_SIZE; i++)
                 {
                     Complex rotate = Complex.FromPolarCoordinates(1, thisError * i + offset);
                     fft[i] = fft[i] * rotate;
@@ -215,10 +206,6 @@ namespace DarkFileTransfer.Common
             for (int i = 0; i < input.Length; i++)
             {
                 bool wipe = false;
-                if (i % 2 == 1)
-                {
-                    wipe = true;
-                }
                 if (i < 32 && i % 4 != 0 || i == 0 || i == 4)
                 {
                     wipe = true;

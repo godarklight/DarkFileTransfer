@@ -21,18 +21,26 @@ namespace DarkFileTransfer.Common
 
         public void ProcessFrame(Complex[] frameFFT)
         {
-
-            for (int i = 32; i < (frameFFT.Length * 0.3); i += 8)
+            int encodedByte = 0;
+            int encodedBits = 0;
+            byte[] encodedData = new byte[Constants.CARRIERS / 4];
+            int encodedWritePos = 0;
+            for (int i = 0; i < Constants.CARRIERS; i++)
             {
-                int value = 0;
-                for (int j = 0; j < 4; j++)
+                encodedByte = encodedByte >> 2;
+                Complex c = frameFFT[32 + i * Constants.CARRIER_SPACING];
+                encodedByte |= (ReadConstellation(c) << 6);
+                encodedBits += 2;
+                if (encodedBits == 8)
                 {
-                    Complex c = frameFFT[i + j * 2];
-                    value |= ReadConstellation(c) << j * 2;
+                    encodedData[encodedWritePos] = (byte)encodedByte;
+                    encodedWritePos++;
+                    encodedBits = 0;
+                    encodedByte = 0;
                 }
-                output.WriteByte((byte)value);
             }
-
+            byte[] decoded = Convoluter.Decode(encodedData);
+            output.Write(decoded, 0, decoded.Length);
             frameNumber++;
         }
 

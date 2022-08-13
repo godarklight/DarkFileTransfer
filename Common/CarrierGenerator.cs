@@ -13,28 +13,26 @@ namespace DarkFileTransfer.Common
         int timingID = 0;
         int timingPos = 0;
         int timingValue = 0;
-        int readPos = 0;
-        byte[] fileBytes;
-        int chunkSize = 512;
+        Stream inputData;
         public bool Completed
         {
-            private set;
-            get;
+            get
+            {
+                return inputData.Position == inputData.Length;
+            }
         }
 
-        public CarrierGenerator(byte[] fileBytes, int chunkSize)
+        public CarrierGenerator(Stream inputData, int chunkSize)
         {
-            Completed = false;
-            this.chunkSize = chunkSize;
-            this.fileBytes = fileBytes;
+            this.inputData = inputData;
         }
 
         public Complex[] GetCarriers()
         {
-            Complex[] retVal = new Complex[chunkSize];
+            Complex[] retVal = new Complex[Constants.FFT_SIZE];
 
             //Pilot Tones
-            retVal[8] = new Complex(2, 0);  
+            retVal[8] = new Complex(2, 0);
             retVal[12] = new Complex(2, 0);
             retVal[16] = new Complex(2, 0);
 
@@ -84,26 +82,28 @@ namespace DarkFileTransfer.Common
 
             //Data channels
             //30% of an 8Khz channel is 2.7Khz
-            for (int i = 0; i < 16; i++)
+            int totalBytes = Constants.CARRIERS / 4;
+            byte[] unencoded = new byte[totalBytes / 2];
+            int inputBytesRead = inputData.Read(unencoded, 0, unencoded.Length);
+            byte[] encoded = Convoluter.Encode(unencoded);
+            int encodedBitsLeft = 0;
+            int encodedByte = 0;
+            int encodedReadPos = 0;
+            for (int i = 0; i < Constants.CARRIERS; i++)
             {
-                if (readPos == fileBytes.Length)
+                if (encodedBitsLeft == 0)
                 {
-                    Completed = true;
-                    break;
+                    encodedByte = encoded[encodedReadPos];
+                    encodedBitsLeft = 8;
+                    encodedReadPos++;
                 }
 
-                int num = fileBytes[readPos];
-
-                for (int j = 0; j < 4; j++)
-                {
-                    double val1 = (num & 1) == 0 ? -1.414 : 1.414;
-                    num = num >> 1;
-                    double val2 = (num & 1) == 0 ? -1.414 : 1.414;
-                    num = num >> 1;
-                    retVal[32 + 8 * i + j * 2] = new Complex(val1, val2);
-                }
-
-                readPos++;
+                double val1 = (encodedByte & 1) == 0 ? -1.414 : 1.414;
+                encodedByte = encodedByte >> 1;
+                double val2 = (encodedByte & 1) == 0 ? -1.414 : 1.414;
+                encodedByte = encodedByte >> 1;
+                encodedBitsLeft -= 2;
+                retVal[32 + i * Constants.CARRIER_SPACING] = new Complex(val1, val2);
             }
 
             //Convert to a real valued signal
@@ -111,6 +111,7 @@ namespace DarkFileTransfer.Common
             {
                 retVal[retVal.Length - i] = Complex.Conjugate(retVal[i]);
             }
+
             return retVal;
         }
     }

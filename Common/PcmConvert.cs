@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Numerics;
 
 namespace DarkFileTransfer.Common
@@ -71,51 +72,53 @@ namespace DarkFileTransfer.Common
             return ConvertComplexToPCM(inputData, inputData.Length);
         }
 
-        public static byte[] AddWAVHeader(byte[] inputData)
+        public static Stream AddWAVHeader(Stream inputData)
         {
+            MemoryStream ms = new MemoryStream();
             //https://onestepcode.com/read-wav-header/
-            byte[] retVal = new byte[inputData.Length + 44];
+            //byte[] retVal = new byte[inputData.Length + 44];
             //ChunkID
-            retVal[0] = (byte)'R';
-            retVal[1] = (byte)'I';
-            retVal[2] = (byte)'F';
-            retVal[3] = (byte)'F';
+            ms.WriteByte((byte)'R');
+            ms.WriteByte((byte)'I');
+            ms.WriteByte((byte)'F');
+            ms.WriteByte((byte)'F');
             //ChunkSize (from byte 8 to the rest of the file)
-            GetIntBytes(inputData.Length + 36, true).CopyTo(retVal, 4);
+            ms.Write(GetIntBytes((int)(inputData.Length) + 36, true), 0, 4);
             //Format
-            retVal[8] = (byte)'W';
-            retVal[9] = (byte)'A';
-            retVal[10] = (byte)'V';
-            retVal[11] = (byte)'E';
+            ms.WriteByte((byte)'W');
+            ms.WriteByte((byte)'A');
+            ms.WriteByte((byte)'V');
+            ms.WriteByte((byte)'E');
             //Subchunk1 ID
-            retVal[12] = (byte)'f';
-            retVal[13] = (byte)'m';
-            retVal[14] = (byte)'t';
-            retVal[15] = (byte)' ';
+            ms.WriteByte((byte)'f');
+            ms.WriteByte((byte)'m');
+            ms.WriteByte((byte)'t');
+            ms.WriteByte((byte)' ');
             //Subchunk1 Size
-            GetIntBytes(16, true).CopyTo(retVal, 16);
+            ms.Write(GetIntBytes(16, true), 0, 4);
             //Audio Format 1=PCM
-            GetShortBytes(1, true).CopyTo(retVal, 20);
+            ms.Write(GetShortBytes(1, true), 0, 2);
             //Channels
-            GetShortBytes(1, true).CopyTo(retVal, 22);
+            ms.Write(GetShortBytes(1, true), 0, 2);
             //Sample rate
-            GetIntBytes(8000, true).CopyTo(retVal, 24);
+            ms.Write(GetIntBytes(8000, true), 0, 4);
             //Byte rate
-            GetIntBytes(16000, true).CopyTo(retVal, 28);
+            ms.Write(GetIntBytes(16000, true), 0, 4);
             //Block align
-            GetShortBytes(2, true).CopyTo(retVal, 32);
+            ms.Write(GetShortBytes(2, true), 0, 2);
             //Bits per sample
-            GetShortBytes(16, true).CopyTo(retVal, 34);
+            ms.Write(GetShortBytes(16, true), 0, 2);
             //Format
-            retVal[36] = (byte)'d';
-            retVal[37] = (byte)'a';
-            retVal[38] = (byte)'t';
-            retVal[39] = (byte)'a';
+            ms.WriteByte((byte)'d');
+            ms.WriteByte((byte)'a');
+            ms.WriteByte((byte)'t');
+            ms.WriteByte((byte)'a');
             //Data size
-            GetIntBytes(inputData.Length, true).CopyTo(retVal, 40);
+            ms.Write(GetIntBytes((int)(inputData.Length), true), 0, 4);
             //Data
-            Buffer.BlockCopy(inputData, 0, retVal, 44, inputData.Length);
-            return retVal;
+            inputData.CopyTo(ms);
+            ms.Seek(0, SeekOrigin.Begin);
+            return ms;
         }
 
         public static byte[] GetIntBytes(int input, bool littleEndian)
